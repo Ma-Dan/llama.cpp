@@ -30,6 +30,9 @@
 #include <signal.h>
 #endif
 
+#include <algorithm>
+#include <regex>
+
 #if defined(_MSC_VER)
 #pragma warning(disable: 4244 4267) // possible loss of data
 #endif
@@ -197,8 +200,10 @@ int main(int argc, char ** argv) {
     // tokenize the prompt
     std::vector<llama_token> embd_inp;
 
+    params.prompt = std::regex_replace(params.prompt, std::regex("\\s+"), "Ġ");
+
     // Add a space in front of the first character to match OG llama tokenizer behavior
-    params.prompt.insert(0, 1, ' ');
+    // params.prompt.insert(0, 1, ' ');
 
     if (params.interactive_first || params.instruct || !params.prompt.empty() || session_tokens.empty()) {
         embd_inp = ::llama_tokenize(ctx, params.prompt, true);
@@ -561,7 +566,7 @@ int main(int argc, char ** argv) {
                 }
 
                 // Apply penalties
-                float nl_logit = logits[llama_token_nl()];
+                /*float nl_logit = logits[llama_token_nl()];
                 auto last_n_repeat = std::min(std::min((int)last_n_tokens.size(), repeat_last_n), n_ctx);
                 llama_sample_repetition_penalty(ctx, &candidates_p,
                     last_n_tokens.data() + last_n_tokens.size() - last_n_repeat,
@@ -571,7 +576,7 @@ int main(int argc, char ** argv) {
                     last_n_repeat, alpha_frequency, alpha_presence);
                 if (!penalize_nl) {
                     logits[llama_token_nl()] = nl_logit;
-                }
+                }*/
 
                 if (temp <= 0) {
                     // Greedy sampling
@@ -636,7 +641,9 @@ int main(int argc, char ** argv) {
         // display text
         if (input_echo) {
             for (auto id : embd) {
-                printf("%s", llama_token_to_str(ctx, id));
+		std::string text = std::string(llama_token_to_str(ctx, id));
+		text = std::regex_replace(text, std::regex("Ġ"), " ");
+                printf("%s", text.c_str());
             }
             fflush(stdout);
         }
